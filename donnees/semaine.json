@@ -1,0 +1,14 @@
+{
+ "plan": {},
+ "extras": {},
+ "coches": {},
+ "reglages": {
+  "heureMidi": "12:30",
+  "heureSoir": "19:30",
+  "rappel": 30,
+  "pers": 2,
+  "repas": [
+   "soir"
+  ]
+ }
+}
