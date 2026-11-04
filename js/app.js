@@ -295,7 +295,9 @@
         <button class="btn primary wide big" id="go" ${scanFiles.length ? '' : 'disabled'}>Lire la recette</button>
         <div class="progress" id="prog" hidden><div class="bar"><i></i></div><p></p></div>
         <p class="center"><a href="#/editer/nouvelle" class="link">Ou saisir une recette à la main</a></p>
-        <p class="muted small center">La lecture se fait dans ton téléphone avec Tesseract, un moteur open source et gratuit. Aucune photo n'est envoyée sur Internet.</p>
+        <p class="muted small center">${Gemini.enabled()
+          ? "Lecture par l'IA Google (Gemini). Sans réseau ou si la limite gratuite est atteinte, la lecture se fait dans le téléphone."
+          : `Lecture dans le téléphone (Tesseract, gratuit, hors ligne). Pour une lecture bien plus fiable, active l'IA Google dans <a class="link" href="#/reglages">Réglages</a>.`}</p>
       </div>`;
     const renderShots = () => {
       const el = $('#shots');
@@ -312,7 +314,16 @@
       const prog = $('#prog'), bar = prog.querySelector('i'), txt = prog.querySelector('p');
       prog.hidden = false; $('#go').disabled = true;
       try {
-        const r = await Scanner.scan(scanFiles, (t, f) => { txt.textContent = t; bar.style.width = Math.round(f * 100) + '%'; });
+        const prog_ = (t, f) => { txt.textContent = t; bar.style.width = Math.round(f * 100) + '%'; };
+        let r;
+        if (Gemini.enabled()) {
+          try { r = await Gemini.scan(scanFiles, prog_); }
+          catch (e) {
+            console.warn(e);
+            toast((e.message || "L'IA Google n'a pas répondu") + ' → lecture dans le téléphone');
+          }
+        }
+        if (!r) r = await Scanner.scan(scanFiles, prog_);
         draft = r; draft._fromScan = true;
         scanFiles = [];
         go('#/editer/brouillon');
@@ -348,6 +359,7 @@
         <p class="sub">${r._fromScan ? 'Corrige si besoin, puis enregistre' : ' '}</p></div>
       </header>
       <form class="editor pad-x" id="ed" autocomplete="off">
+        ${r._fromScan && r.lu === 'ia' ? `<div class="notice ok">${ic('check')} <span>Lu par l'IA Google. Jette un œil rapide avant d'enregistrer.</span></div>` : ''}
         ${r._fromScan && toCheck ? `<div class="notice">${ic('warn')} <span>${toCheck} ingrédient${toCheck > 1 ? 's' : ''} à vérifier (surligné${toCheck > 1 ? 's' : ''} en orange).</span></div>` : ''}
         ${r.photo ? `<div class="ed-photo"><img src="${r.photo}" alt=""><button type="button" class="btn soft small" id="rm-photo">Retirer la photo</button></div>` : ''}
         <label class="fld"><span>Titre</span><input name="titre" value="${esc(r.titre)}" placeholder="Ex. Poulet curry coco" required></label>
@@ -466,7 +478,7 @@
       if (!r.titre) { form.titre.focus(); return toast('Donne un titre à la recette'); }
       r.ingredients = r.ingredients.filter(i => i.nom).map(i => { delete i.verifier; return i; });
       r.etapes = r.etapes.filter(s => s.lignes.length || s.titre);
-      delete r._fromScan;
+      delete r._fromScan; delete r.lu;
       const saved = S.upsert(r);
       draft = null;
       toast('Recette enregistrée');
@@ -731,7 +743,7 @@
     const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
     app.innerHTML = `
       <header class="top"><h1>Réglages</h1><p class="sub">Horaires, rappels et sauvegarde</p></header>
-      <div class="pad-x editor">${syncSection()}</div>
+      <div class="pad-x editor">${geminiSection()}${syncSection()}</div>
       <form class="pad-x editor" id="rg">
         <h2>Repas & rappels</h2>
         <div class="row2">
@@ -760,7 +772,7 @@
         <button type="button" class="btn danger wide" id="reset">Tout effacer</button>
         <p class="muted small center pad">Recette · v1 · lecture des photos par Tesseract.js (open source)</p>
       </form>`;
-    bindSync();
+    bindSync(); bindGemini();
     const f = $('#rg');
     f.addEventListener('change', () => {
       R.heureMidi = f.heureMidi.value || '12:30';
@@ -785,6 +797,38 @@
     });
   }
 
+
+  /* ---------- IA Google (Réglages) ---------- */
+  function geminiSection() {
+    const st = Gemini.status();
+    if (st.on) return `<h2>Lecture des fiches par IA</h2>
+      <div class="sync-card"><p class="sync-name">${ic('check')} <b>IA Google activée</b> <span class="chip soft">${esc(st.model || '')}</span></p>
+      <p class="muted small">Les scans sont lus par Gemini. La clé reste dans ce téléphone.</p></div>
+      <button type="button" class="btn ghost wide" id="gm-off">Désactiver l'IA Google</button>`;
+    return `<h2>Lecture des fiches par IA</h2>
+      <p class="muted small">Par défaut, la lecture se fait dans le téléphone (moins fiable). Avec une clé gratuite Google, l'IA Gemini lit les fiches presque parfaitement.</p>
+      <details class="howto"><summary>Obtenir une clé gratuite (2 minutes)</summary>
+        <ol>
+          <li>Va sur <a class="link" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> et connecte-toi avec ton compte Google.</li>
+          <li>Touche <b>Create API key</b> (« Créer une clé API »).</li>
+          <li>Copie la clé (elle commence par <code>AIza</code>) et colle-la ci-dessous.</li>
+        </ol>
+        <p class="small muted">Gratuit dans la limite d'utilisation de Google. Les photos scannées sont envoyées à Google pour être lues.</p>
+      </details>
+      <label class="fld"><span>Clé Google (Gemini)</span><input id="gm-key" type="password" placeholder="AIza…" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
+      <p class="small err-text" id="gm-err" hidden></p>
+      <button type="button" class="btn primary wide" id="gm-go">${ic('check')} Activer l'IA Google</button>`;
+  }
+  function bindGemini() {
+    const off = $('#gm-off'), go_ = $('#gm-go');
+    if (off) off.addEventListener('click', () => { Gemini.disconnect(); toast('IA Google désactivée'); viewReglages(); });
+    if (go_) go_.addEventListener('click', async () => {
+      const err = $('#gm-err'); err.hidden = true;
+      go_.disabled = true; go_.textContent = 'Vérification…';
+      try { await Gemini.connect($('#gm-key').value); toast('IA Google activée'); viewReglages(); }
+      catch (e) { err.textContent = e.message; err.hidden = false; go_.disabled = false; go_.innerHTML = `${ic('check')} Activer l'IA Google`; }
+    });
+  }
 
   /* ---------- Synchronisation GitHub (Réglages) ---------- */
   function ago(isoStr) {

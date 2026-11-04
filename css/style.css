@@ -308,3 +308,5 @@ textarea { resize: vertical; line-height: 1.45; }
 .syncb .ic { width: 16px; height: 16px; }
 .syncb.err { color: var(--accent); }
 .credit { margin: 8px 0 0; font-size: 13.5px; color: var(--ink-2); font-style: italic; }
+.notice.ok { background: var(--brand-soft); }
+.notice.ok .ic { color: var(--brand); }

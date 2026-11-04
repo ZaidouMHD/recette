@@ -53,7 +53,7 @@
       save();
     },
     exportJSON() {
-      const copy = Object.assign({}, data); delete copy.sync; // le jeton GitHub ne part jamais dans une sauvegarde
+      const copy = Object.assign({}, data); delete copy.sync; delete copy.gemini; // le jeton GitHub et la clé Google ne partent jamais dans une sauvegarde
       return JSON.stringify(Object.assign({ format: 'recette-app', version: 1, exporteLe: new Date().toISOString() }, copy), null, 1);
     },
     importJSON(txt) {
