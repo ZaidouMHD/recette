@@ -1,8 +1,8 @@
 // Fonctionnement hors connexion : l'app et le moteur de lecture restent en cache.
-const VERSION = 'recette-v1';
+const VERSION = 'recette-v2';
 const SHELL = [
   './', 'index.html', 'css/style.css', 'manifest.webmanifest',
-  'js/ingredients-db.js', 'js/parser.js', 'js/store.js', 'js/scan.js', 'js/app.js',
+  'js/ingredients-db.js', 'js/parser.js', 'js/store.js', 'js/scan.js', 'js/sync.js', 'js/app.js',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/apple-touch-icon.png',
 ];
 self.addEventListener('install', (e) => {

@@ -21,8 +21,12 @@
     } catch (e) { console.warn('Lecture des données impossible', e); }
     return data;
   }
-  function save() {
-    try { localStorage.setItem(KEY, JSON.stringify(data)); return true; }
+  function save(opts) {
+    try {
+      localStorage.setItem(KEY, JSON.stringify(data));
+      if (!(opts && opts.quiet) && root.Sync) root.Sync.schedule();
+      return true;
+    }
     catch (e) {
       console.warn(e);
       alert("Mémoire du téléphone pleine pour l'app : supprime quelques photos de recettes ou exporte une sauvegarde.");
@@ -38,6 +42,7 @@
     upsert(r) {
       if (!r.id) r.id = uid();
       r.modifieLe = new Date().toISOString();
+      delete r.partagee; // modifiée par ce téléphone : elle lui appartient
       const i = data.recettes.findIndex(x => x.id === r.id);
       if (i >= 0) data.recettes[i] = r; else { r.creeLe = r.modifieLe; data.recettes.unshift(r); }
       save(); return r;
@@ -47,7 +52,10 @@
       for (const d of Object.keys(data.plan)) for (const m of Object.keys(data.plan[d])) if (data.plan[d][m] && data.plan[d][m].id === id) delete data.plan[d][m];
       save();
     },
-    exportJSON() { return JSON.stringify(Object.assign({ format: 'recette-app', version: 1, exporteLe: new Date().toISOString() }, data), null, 1); },
+    exportJSON() {
+      const copy = Object.assign({}, data); delete copy.sync; // le jeton GitHub ne part jamais dans une sauvegarde
+      return JSON.stringify(Object.assign({ format: 'recette-app', version: 1, exporteLe: new Date().toISOString() }, copy), null, 1);
+    },
     importJSON(txt) {
       const d = JSON.parse(txt);
       if (!d || !Array.isArray(d.recettes)) throw new Error('Fichier non reconnu');

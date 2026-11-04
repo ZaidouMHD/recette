@@ -103,6 +103,7 @@
     check: '<svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
     users: '<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><path d="M15.5 4.8a3.3 3.3 0 0 1 0 6.4M18 14.8c2 .7 3.2 2.4 3.5 5.2"/></svg>',
     bell: '<svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15z"/><path d="M10 21h4"/></svg>',
+    cloud: '<svg viewBox="0 0 24 24"><path d="M7 18.5h10.5a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.6 9.1 4.7 4.7 0 0 0 7 18.5z"/></svg>',
     warn: '<svg viewBox="0 0 24 24"><path d="M12 3.5 2.5 20h19z"/><path d="M12 10v4.5M12 17.2v.3"/></svg>',
   };
   const ic = (n, cls = '') => `<span class="ic ${cls}" aria-hidden="true">${I[n]}</span>`;
@@ -148,7 +149,7 @@
     app.innerHTML = `
       <header class="top">
         <h1>Mes recettes</h1>
-        <p class="sub">${all.length ? `${all.length} recette${all.length > 1 ? 's' : ''}` : 'Ta bibliothèque de recettes'}</p>
+        <p class="sub">${all.length ? `${all.length} recette${all.length > 1 ? 's' : ''}` : 'Ta bibliothèque de recettes'}${syncBadge()}</p>
       </header>
       ${all.length ? `<label class="search">${ic('search')}<input id="q" type="search" placeholder="Chercher une recette, un ingrédient…" value="${esc(query)}" autocomplete="off"></label>` : ''}
       ${all.length === 0 ? `
@@ -207,6 +208,7 @@
           ${r.kcal ? `<span class="chip">${ic('fire')} ${r.kcal} kcal</span>` : ''}
           ${(r.tags || []).map(x => `<span class="chip soft">${esc(x)}</span>`).join('')}
         </div>
+        ${r.source ? `<p class="credit">Recette ${esc(r.source)}</p>` : ''}
         <div class="pers">
           <span>${ic('users')} Pour</span>
           <button class="step" data-pers="-1" aria-label="Moins de personnes">${ic('minus')}</button>
@@ -350,7 +352,7 @@
         ${r.photo ? `<div class="ed-photo"><img src="${r.photo}" alt=""><button type="button" class="btn soft small" id="rm-photo">Retirer la photo</button></div>` : ''}
         <label class="fld"><span>Titre</span><input name="titre" value="${esc(r.titre)}" placeholder="Ex. Poulet curry coco" required></label>
         <div class="row2">
-          <label class="fld"><span>Source</span><input name="source" value="${esc(r.source)}" placeholder="Quitoque, livre…"></label>
+          <label class="fld"><span>Source (crédit)</span><input name="source" value="${esc(r.source)}" placeholder="Quitoque, livre, mamie…"></label>
           <label class="fld"><span>Calories (kcal)</span><input name="kcal" inputmode="numeric" value="${esc(r.kcal || '')}"></label>
         </div>
         <label class="fld"><span>Pour combien de personnes ? <em>(plusieurs colonnes : « 2, 3, 4, 5, 6 »)</em></span>
@@ -729,6 +731,7 @@
     const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
     app.innerHTML = `
       <header class="top"><h1>Réglages</h1><p class="sub">Horaires, rappels et sauvegarde</p></header>
+      <div class="pad-x editor">${syncSection()}</div>
       <form class="pad-x editor" id="rg">
         <h2>Repas & rappels</h2>
         <div class="row2">
@@ -757,6 +760,7 @@
         <button type="button" class="btn danger wide" id="reset">Tout effacer</button>
         <p class="muted small center pad">Recette · v1 · lecture des photos par Tesseract.js (open source)</p>
       </form>`;
+    bindSync();
     const f = $('#rg');
     f.addEventListener('change', () => {
       R.heureMidi = f.heureMidi.value || '12:30';
@@ -781,9 +785,91 @@
     });
   }
 
+
+  /* ---------- Synchronisation GitHub (Réglages) ---------- */
+  function ago(isoStr) {
+    if (!isoStr) return '';
+    const m = Math.round((Date.now() - new Date(isoStr).getTime()) / 60000);
+    if (m < 1) return "à l'instant";
+    if (m < 60) return `il y a ${m} min`;
+    if (m < 24 * 60) return `il y a ${Math.round(m / 60)} h`;
+    const d = new Date(isoStr); return `le ${d.getDate()} ${MOIS[d.getMonth()]}`;
+  }
+  function syncSection() {
+    const st = Sync.status();
+    if (st.on) {
+      return `<h2>Synchronisation GitHub</h2>
+        <div class="sync-card ${st.error ? 'err' : ''}">
+          <p class="sync-name">${ic('cloud')} <b>${esc(st.nom)}</b> ${st.prive === false ? '<span class="chip soft">public · partagé</span>' : '<span class="chip soft">privé</span>'}</p>
+          <p class="muted small" id="sync-state">${st.running ? 'Synchronisation…' : st.error ? '⚠ ' + esc(st.error) : st.last ? 'Synchronisé ' + ago(st.last) : 'Première synchronisation…'}</p>
+          ${st.prive === false ? `<p class="small">Dépôt public : tes recettes sont partagées sur le site pour tout le monde.</p>` : ''}
+        </div>
+        <div class="row2">
+          <button type="button" class="btn soft" id="sync-now">Synchroniser</button>
+          <button type="button" class="btn ghost" id="sync-off">Déconnecter</button>
+        </div>
+        <p class="muted small">Tout se synchronise automatiquement : recettes, semaine, liste de courses et réglages.</p>`;
+    }
+    const host = location.hostname.match(/^([\w-]+)\.github\.io$/i);
+    const guess = host ? `${host[1]}/${location.pathname.split('/').filter(Boolean)[0] || 'recette'}` : '';
+    return `<h2>Publier mes recettes sur GitHub</h2>
+      <p class="muted small">Pour le propriétaire du site : tes recettes et ta semaine sont envoyées sur GitHub. Tes autres téléphones les retrouvent automatiquement, et tout le monde peut profiter des recettes sur le site.</p>
+      <details class="howto"><summary>Comment faire (2 minutes, une seule fois)</summary>
+        <ol>
+          <li>Crée un jeton d'accès : <a class="link" href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">nouveau jeton GitHub</a>.<br>
+            Nom : <i>Recette</i> · Expiration : la plus longue possible<br>
+            <i>Repository access</i> → <b>Only select repositories</b> → ${esc(guess ? guess.split('/')[1] : 'recette')}<br>
+            <i>Permissions</i> → <i>Repository permissions</i> → <b>Contents : Read and write</b><br>
+            Puis <i>Generate token</i> et copie le jeton (il commence par <code>github_pat_</code>).</li>
+          <li>Colle le dépôt et le jeton ci-dessous. Sur ton autre téléphone, fais juste cette étape avec le même jeton.</li>
+        </ol>
+      </details>
+      <label class="fld"><span>Dépôt</span><input id="sy-repo" value="${esc(guess)}" placeholder="pseudo/recette" autocapitalize="off" autocorrect="off" spellcheck="false"></label>
+      <label class="fld"><span>Jeton GitHub</span><input id="sy-token" type="password" placeholder="github_pat_…" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
+      <p class="small err-text" id="sy-err" hidden></p>
+      <button type="button" class="btn primary wide" id="sy-go">${ic('cloud')} Connecter et synchroniser</button>
+      <p class="muted small">Le jeton reste dans ce téléphone et n'est jamais inclus dans les sauvegardes exportées.</p>`;
+  }
+  function bindSync() {
+    const now = $('#sync-now'), off = $('#sync-off'), go_ = $('#sy-go');
+    if (now) now.addEventListener('click', () => { Sync.run(); const el = $('#sync-state'); if (el) el.textContent = 'Synchronisation…'; });
+    if (off) off.addEventListener('click', () => {
+      if (!confirm('Déconnecter ce téléphone de GitHub ? Tes recettes restent sur le téléphone et sur GitHub.')) return;
+      Sync.disconnect(); viewReglages();
+    });
+    if (go_) go_.addEventListener('click', async () => {
+      const err = $('#sy-err'); err.hidden = true;
+      go_.disabled = true; go_.textContent = 'Connexion…';
+      try {
+        const r = await Sync.connect($('#sy-repo').value, $('#sy-token').value);
+        if (r.error) throw new Error(r.error);
+        toast(r.prive ? 'Synchronisation activée' : 'Synchronisation activée, recettes partagées');
+        viewReglages();
+      } catch (e) {
+        if (Sync.status().on) { viewReglages(); return; }
+        err.textContent = e.message; err.hidden = false;
+        go_.disabled = false; go_.innerHTML = `${ic('cloud')} Connecter et synchroniser`;
+      }
+    });
+  }
+  function syncBadge() {
+    const st = Sync.status();
+    if (!st.on) return '';
+    return ` · <span class="syncb ${st.error ? 'err' : ''}">${ic('cloud')}${st.running ? 'synchro…' : st.error ? 'erreur de synchro' : 'synchronisé'}</span>`;
+  }
+
   /* ---------- Démarrage ---------- */
   if ('serviceWorker' in navigator && location.protocol === 'https:') {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
+  Sync.on((ev) => {
+    const page = (location.hash || '#/recettes').replace(/^#\/?/, '').split('/')[0];
+    const typing = document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
+    if (ev.changed && /editer|scan/.test(page)) { toast('Recettes mises à jour depuis GitHub'); return; }
+    if (typing) return;
+    if (ev.changed || page === 'reglages' || page === 'recettes' || page === '') { const y = window.scrollY; route(); window.scrollTo(0, y); }
+    if (ev.changed) toast('Mis à jour depuis GitHub');
+  });
   route();
+  Sync.schedule(400);
 })();

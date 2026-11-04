@@ -353,7 +353,7 @@
     all.forEach(l => { const ms = l.match(/(\d{1,3})\s*m[il1]n/gi); if (ms && ms.length <= 3) ms.forEach(x => mins.push(parseInt(x, 10))); });
     meta.minutes = mins;
     if (/sans gluten/.test(p)) meta.tags = ['Sans gluten'];
-    if (/qu.?.?toque|quitoque|\btoque\b/.test(p)) meta.source = 'Quitoque';
+    if (/qu.?.?toque|quitoque|\btoque\b|130 additifs|la cuisine c ?est la vie/.test(p)) meta.source = 'Quitoque';
     else if (/hello ?fresh/.test(p)) meta.source = 'HelloFresh';
     return meta;
   }

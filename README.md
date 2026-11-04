@@ -24,9 +24,19 @@ Aucune API payante et aucun compte : tout tourne **dans le téléphone**.
 
 Aucune photo ne quitte le téléphone.
 
-## Données
+## Partage et synchronisation
 
-Tout est enregistré dans le navigateur du téléphone (`localStorage`). Pense à **exporter une sauvegarde** de temps en temps (Réglages → Exporter).
+- **Pour tout le monde** : les recettes publiées sont dans `donnees/catalogue.json`. Chaque visiteur du site les voit et peut les ajouter à sa semaine et à sa liste de courses, sans compte. Chaque recette affiche sa source (« Recette … »).
+- **Pour le propriétaire** : Réglages → *Publier mes recettes sur GitHub*. Avec un jeton GitHub (permission *Contents : Read and write* sur ce dépôt), le téléphone envoie automatiquement :
+  - `donnees/recettes/<id>.json` : une recette par fichier ;
+  - `donnees/semaine.json` : planning, liste de courses, réglages ;
+  - `donnees/catalogue.json` : toutes les recettes, lues par le site public.
+
+  Un autre téléphone connecté avec le même jeton retrouve tout. Les modifications faites des deux côtés sont fusionnées, et l'historique Git garde chaque version (une recette supprimée par erreur se récupère).
+
+## Données locales
+
+Tout est aussi enregistré dans le navigateur du téléphone (`localStorage`), donc l'app marche hors connexion. Réglages → Exporter crée une sauvegarde JSON (le jeton GitHub n'y est jamais inclus).
 
 ## Développement
 

@@ -289,3 +289,22 @@ textarea { resize: vertical; line-height: 1.45; }
   opacity: 0; pointer-events: none; transition: all .2s; z-index: 60; max-width: calc(100% - 32px); text-align: center;
 }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* Synchronisation */
+.sync-card { background: var(--surface); border-radius: var(--r); padding: 12px 14px; box-shadow: var(--shadow); }
+.sync-card.err { outline: 2px solid var(--accent); }
+.sync-card p { margin: 0; }
+.sync-card p + p { margin-top: 4px; }
+.sync-name { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sync-name .ic { color: var(--brand); }
+.chip.warnchip { background: var(--accent-soft); border-color: transparent; color: var(--accent); }
+.howto { background: var(--surface); border-radius: var(--r); padding: 10px 14px; margin: 10px 0; }
+.howto summary { cursor: pointer; font-weight: 600; color: var(--brand); }
+.howto ol { padding-left: 20px; margin: 10px 0 4px; font-size: 14.5px; }
+.howto li { margin-bottom: 10px; }
+.howto code { font-size: 13px; background: var(--surface-2); padding: 1px 5px; border-radius: 6px; }
+.err-text { color: var(--danger); margin: 8px 0 0; }
+.syncb { display: inline-flex; align-items: center; gap: 4px; }
+.syncb .ic { width: 16px; height: 16px; }
+.syncb.err { color: var(--accent); }
+.credit { margin: 8px 0 0; font-size: 13.5px; color: var(--ink-2); font-style: italic; }
