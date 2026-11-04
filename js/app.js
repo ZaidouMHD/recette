@@ -71,12 +71,34 @@
   function sheet(html, onMount) {
     const wrap = document.createElement('div');
     wrap.className = 'sheet-wrap';
-    wrap.innerHTML = `<div class="sheet" role="dialog" aria-modal="true"><div class="sheet-grip"></div>${html}</div>`;
+    wrap.innerHTML = `<div class="sheet" role="dialog" aria-modal="true"><div class="sheet-grip-zone" aria-label="Fermer" role="button"><div class="sheet-grip"></div></div><button class="sheet-x icon-btn" data-close aria-label="Fermer">${I.x}</button>${html}</div>`;
     document.body.appendChild(wrap);
     requestAnimationFrame(() => wrap.classList.add('open'));
-    const close = () => { wrap.classList.remove('open'); setTimeout(() => wrap.remove(), 200); };
+    const sh = wrap.querySelector('.sheet');
+    const close = () => { sh.style.transition = ''; sh.style.transform = ''; wrap.classList.remove('open'); setTimeout(() => wrap.remove(), 220); };
     wrap.addEventListener('click', (e) => { if (e.target === wrap || e.target.closest('[data-close]')) close(); });
-    if (onMount) onMount(wrap.querySelector('.sheet'), close);
+    // Glisser le petit trait vers le bas (ou le toucher) pour fermer
+    const zone = wrap.querySelector('.sheet-grip-zone');
+    let y0 = null, dy = 0;
+    const pt = (e) => (e.touches ? e.touches[0] : e).clientY;
+    const start = (e) => { y0 = pt(e); dy = 0; sh.style.transition = 'none'; };
+    const move = (e) => {
+      if (y0 == null) return;
+      dy = Math.max(0, pt(e) - y0);
+      sh.style.transform = `translateY(${dy}px)`;
+      if (e.cancelable) e.preventDefault();
+    };
+    const end = () => {
+      if (y0 == null) return;
+      y0 = null;
+      if (dy > 60 || dy < 6) close();
+      else { sh.style.transition = ''; sh.style.transform = ''; }
+    };
+    zone.addEventListener('touchstart', start, { passive: true });
+    zone.addEventListener('touchmove', move, { passive: false });
+    zone.addEventListener('touchend', end);
+    zone.addEventListener('mousedown', (e) => { start(e); const mm = (ev) => move(ev); const mu = () => { end(); window.removeEventListener('mousemove', mm); window.removeEventListener('mouseup', mu); }; window.addEventListener('mousemove', mm); window.addEventListener('mouseup', mu); });
+    if (onMount) onMount(sh, close);
     return close;
   }
 

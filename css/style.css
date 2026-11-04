@@ -1,3 +1,4 @@
+[hidden] { display: none !important; }
 :root {
   --bg: #f7f3ec;
   --surface: #ffffff;
@@ -183,7 +184,11 @@ h3.sec { margin: 18px 0 8px; font-size: 16px; color: var(--brand); }
   transform: translateY(100%); transition: transform .22s ease;
 }
 .sheet-wrap.open .sheet { transform: none; }
-.sheet-grip { width: 40px; height: 5px; border-radius: 3px; background: var(--line); margin: 4px auto 14px; }
+.sheet-grip-zone { margin: -8px -16px 6px; padding: 12px 0 14px; cursor: grab; touch-action: none; }
+.sheet-grip { width: 44px; height: 5px; border-radius: 3px; background: var(--line); margin: 0 auto; }
+.sheet { position: relative; }
+.sheet-x { position: absolute; top: 10px; right: 8px; }
+.sheet-x svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
 .sheet h2 { margin: 0 0 4px; }
 .daypick { margin: 12px 0; display: flex; flex-direction: column; gap: 6px; }
 .dayrow { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line); }

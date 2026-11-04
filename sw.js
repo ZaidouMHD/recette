@@ -1,5 +1,5 @@
 // Fonctionnement hors connexion : l'app et le moteur de lecture restent en cache.
-const VERSION = 'recette-v3';
+const VERSION = 'recette-v4';
 const SHELL = [
   './', 'index.html', 'css/style.css', 'manifest.webmanifest',
   'js/ingredients-db.js', 'js/parser.js', 'js/store.js', 'js/scan.js', 'js/sync.js', 'js/gemini.js', 'js/app.js',
