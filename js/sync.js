@@ -160,10 +160,12 @@
       if (changed) d.recettes.sort((a, b) => String(b.creeLe || '').localeCompare(String(a.creeLe || '')));
 
       /* ----- Catalogue public (toutes les recettes dans un seul fichier, lu par le site) ----- */
-      const catSnap = d.recettes.map(r => r.id + '@' + r.modifieLe).join('|');
+      // seules les recettes validées sont publiées sur le site
+      const publiees = d.recettes.filter(r => !r.aVerifier);
+      const catSnap = publiees.map(r => r.id + '@' + r.modifieLe).join('|');
       if (!c.catalogue || c.catalogue.snap !== catSnap) {
         const cur = await gh(file(DIR + 'catalogue.json'), { allow404: true });
-        const recettes = d.recettes.map(r => { const x = Object.assign({}, r); delete x.texteBrut; delete x.partagee; return x; });
+        const recettes = publiees.map(r => { const x = Object.assign({}, r); delete x.texteBrut; delete x.partagee; delete x.fiches; return x; });
         try {
           const sha = await put(DIR + 'catalogue.json', JSON.stringify({ majLe: new Date().toISOString(), recettes }), cur && cur.sha, `Catalogue : ${recettes.length} recette${recettes.length > 1 ? 's' : ''}`);
           c.catalogue = { sha, snap: catSnap };

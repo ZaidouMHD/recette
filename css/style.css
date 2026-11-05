@@ -315,3 +315,18 @@ textarea { resize: vertical; line-height: 1.45; }
 .credit { margin: 8px 0 0; font-size: 13.5px; color: var(--ink-2); font-style: italic; }
 .notice.ok { background: var(--brand-soft); }
 .notice.ok .ic { color: var(--brand); }
+
+/* Vérification avant publication */
+.thumb { position: relative; }
+.badge-verif { position: absolute; left: 8px; top: 8px; background: var(--accent); color: #fff; font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; }
+.verif-bar { width: calc(100% - 32px); margin: 0 16px 12px; border: 0; font: inherit; color: var(--ink); text-align: left; align-items: center; cursor: pointer; }
+.verif-bar span { flex: 1; }
+.verif-bar em { font-style: normal; font-weight: 700; color: var(--accent); }
+.verif-box { margin: 14px 0 6px; }
+.verif-box p { margin: 4px 0 10px; font-size: 14.5px; }
+.verif-box .row2 { margin-top: 0; }
+.fiches { background: var(--surface); border-radius: var(--r); padding: 10px 12px; margin: 6px 0 10px; border: 1px solid var(--line); }
+.fiches summary { font-weight: 700; cursor: pointer; color: var(--accent); }
+.fiches-imgs { display: flex; gap: 8px; overflow-x: auto; margin-top: 10px; scroll-snap-type: x mandatory; }
+.fiches-imgs a { flex: none; width: 78%; max-width: 360px; scroll-snap-align: start; }
+.fiches-imgs img { width: 100%; border-radius: 10px; }

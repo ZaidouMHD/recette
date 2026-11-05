@@ -161,17 +161,20 @@
   window.addEventListener('hashchange', route);
 
   /* ================= RECETTES ================= */
-  let query = '';
+  let query = '', filtreVerif = false;
   function viewRecettes() {
     nav('recettes');
     const all = S.data.recettes;
     const q = IngredientsDB.norm(query);
-    const list = all.filter(r => !q || IngredientsDB.norm(r.titre + ' ' + (r.ingredients || []).map(i => i.nom).join(' ')).includes(q));
+    const nVerif = all.filter(r => r.aVerifier).length;
+    if (!nVerif) filtreVerif = false;
+    const list = all.filter(r => (!filtreVerif || r.aVerifier) && (!q || IngredientsDB.norm(r.titre + ' ' + (r.ingredients || []).map(i => i.nom).join(' ')).includes(q)));
     app.innerHTML = `
       <header class="top">
         <h1>Mes recettes</h1>
         <p class="sub">${all.length ? `${all.length} recette${all.length > 1 ? 's' : ''}` : 'Ta bibliothèque de recettes'}${syncBadge()}</p>
       </header>
+      ${nVerif ? `<button class="notice verif-bar" id="fv">${ic('warn')}<span><b>${nVerif} recette${nVerif > 1 ? 's' : ''} à vérifier</b>${Sync.status().on ? ' · pas encore sur le site' : ''}</span><em>${filtreVerif ? 'Tout afficher' : 'Voir'}</em></button>` : ''}
       ${all.length ? `<label class="search">${ic('search')}<input id="q" type="search" placeholder="Chercher une recette, un ingrédient…" value="${esc(query)}" autocomplete="off"></label>` : ''}
       ${all.length === 0 ? `
         <div class="empty">
@@ -186,18 +189,24 @@
         </div>`}
       ${all.length ? `<a class="fab" href="#/scan" aria-label="Scanner une recette">${ic('camera')}<span>Scanner</span></a>` : ''}
     `;
+    const fv = $('#fv'); if (fv) fv.addEventListener('click', () => { filtreVerif = !filtreVerif; viewRecettes(); });
     const qi = $('#q');
     if (qi) qi.addEventListener('input', () => { query = qi.value; const pos = qi.selectionStart; viewRecettes(); const n = $('#q'); n.focus(); n.setSelectionRange(pos, pos); });
   }
   function cardRecette(r) {
     const t = timeFor(r, defaultPers(r));
     return `<a class="card" href="#/recette/${r.id}">
-      <div class="thumb">${r.photo ? `<img src="${r.photo}" alt="" loading="lazy">` : `<span class="thumb-ph">${esc((r.titre || '?').charAt(0))}</span>`}</div>
+      <div class="thumb">${r.photo ? `<img src="${r.photo}" alt="" loading="lazy">` : `<span class="thumb-ph">${esc((r.titre || '?').charAt(0))}</span>`}${r.aVerifier ? '<span class="badge-verif">À vérifier</span>' : ''}</div>
       <div class="card-body">
         <h3>${esc(r.titre || 'Sans titre')}</h3>
         <p class="meta">${t.total ? `${ic('clock')} ${t.total} min` : ''}${r.kcal ? ` · ${r.kcal} kcal` : ''}${r.source ? ` · ${esc(r.source)}` : ''}</p>
       </div>
     </a>`;
+  }
+
+  function validate(r) {
+    delete r.aVerifier; delete r.fiches;
+    (r.ingredients || []).forEach(i => { delete i.verifier; });
   }
 
   /* ================= DÉTAIL ================= */
@@ -230,6 +239,11 @@
           ${(r.tags || []).map(x => `<span class="chip soft">${esc(x)}</span>`).join('')}
         </div>
         ${r.source ? `<p class="credit">Recette ${esc(r.source)}</p>` : ''}
+        ${r.aVerifier ? `<div class="notice verif-box">${ic('warn')}<div>
+          <b>À vérifier</b>
+          <p>${Sync.status().on ? 'Pas encore publiée sur le site. ' : ''}Compare avec la fiche originale et corrige si besoin, puis valide.</p>
+          <div class="row2"><a class="btn soft" href="#/editer/${r.id}">Comparer et corriger</a><button class="btn primary" id="valider">${ic('check')} C'est bon</button></div>
+        </div></div>` : ''}
         <div class="pers">
           <span>${ic('users')} Pour</span>
           <button class="step" data-pers="-1" aria-label="Moins de personnes">${ic('minus')}</button>
@@ -257,6 +271,12 @@
     }));
     app.querySelectorAll('.steps li').forEach(li => li.addEventListener('click', () => li.classList.toggle('done')));
     $('#plan-btn').addEventListener('click', () => planSheet(r, n));
+    const va = $('#valider');
+    if (va) va.addEventListener('click', () => {
+      validate(r); S.upsert(r);
+      toast(Sync.status().on ? 'Recette validée : elle sera publiée sur le site' : 'Recette validée');
+      viewRecette(id);
+    });
   }
 
   function planSheet(r, n) {
@@ -345,6 +365,9 @@
           }
         }
         if (!r) r = await Scanner.scan(scanFiles, prog_);
+        // Toute recette scannée doit être vérifiée avant d'être publiée ; on garde la fiche pour comparer
+        r.aVerifier = true;
+        try { prog_('Enregistrement de la fiche originale…', 0.99); r.fiches = await Promise.all(scanFiles.map(f => Scanner.compress(f))); } catch (e) { console.warn(e); }
         draft = r; draft._fromScan = true;
         scanFiles = [];
         go('#/editer/brouillon');
@@ -382,6 +405,9 @@
       <form class="editor pad-x" id="ed" autocomplete="off">
         ${r._fromScan && r.lu === 'ia' ? `<div class="notice ok">${ic('check')} <span>Lu par l'IA Google. Jette un œil rapide avant d'enregistrer.</span></div>` : ''}
         ${r._fromScan && toCheck ? `<div class="notice">${ic('warn')} <span>${toCheck} ingrédient${toCheck > 1 ? 's' : ''} à vérifier (surligné${toCheck > 1 ? 's' : ''} en orange).</span></div>` : ''}
+        ${r.fiches && r.fiches.length ? `<details class="fiches" open><summary>Fiche originale (pour comparer)</summary>
+          <div class="fiches-imgs">${r.fiches.map((f, k) => `<a href="${f}" target="_blank" rel="noopener"><img src="${f}" alt="Fiche, photo ${k + 1}"></a>`).join('')}</div>
+          <p class="muted small">Touche une photo pour l'agrandir.</p></details>` : ''}
         ${r.photo ? `<div class="ed-photo"><img src="${r.photo}" alt=""><button type="button" class="btn soft small" id="rm-photo">Retirer la photo</button></div>` : ''}
         <label class="fld"><span>Titre</span><input name="titre" value="${esc(r.titre)}" placeholder="Ex. Poulet curry coco" required></label>
         <div class="row2">
@@ -431,7 +457,12 @@
         ${r.texteBrut ? `<details class="raw"><summary>Texte lu par le scanner</summary><pre>${esc(r.texteBrut)}</pre></details>` : ''}
 
         <div class="ed-actions">
-          <button type="submit" class="btn primary wide big">${ic('check')} Enregistrer</button>
+          ${r.aVerifier
+            ? `<button type="submit" class="btn primary wide big" data-valider="1">${ic('check')} C'est vérifié, enregistrer</button>`
+            : `<button type="submit" class="btn primary wide big">${ic('check')} Enregistrer</button>`}
+        </div>
+        <div>
+          ${r.aVerifier ? `<button type="submit" class="btn soft wide" data-valider="0">Enregistrer, je vérifierai plus tard</button>` : ''}
           ${r.id ? `<button type="button" class="btn danger wide" id="del">${ic('trash')} Supprimer la recette</button>` : ''}
         </div>
       </form>`;
@@ -493,16 +524,19 @@
       if (!confirm('Supprimer définitivement cette recette ?')) return;
       S.remove(r.id); draft = null; toast('Recette supprimée'); go('#/recettes');
     });
+    let valider = !r.aVerifier;
+    form.querySelectorAll('[data-valider]').forEach(b => b.addEventListener('click', () => { valider = b.dataset.valider === '1'; }));
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       collect();
       if (!r.titre) { form.titre.focus(); return toast('Donne un titre à la recette'); }
-      r.ingredients = r.ingredients.filter(i => i.nom).map(i => { delete i.verifier; return i; });
+      r.ingredients = r.ingredients.filter(i => i.nom).map(i => { if (!i.verifier) delete i.verifier; return i; });
       r.etapes = r.etapes.filter(s => s.lignes.length || s.titre);
       delete r._fromScan; delete r.lu;
+      if (valider) validate(r);
       const saved = S.upsert(r);
       draft = null;
-      toast('Recette enregistrée');
+      toast(r.aVerifier ? 'Enregistrée, à vérifier (pas encore sur le site)' : 'Recette enregistrée');
       go('#/recette/' + saved.id);
     });
   }

@@ -126,5 +126,15 @@
     return recipe;
   }
 
-  root.Scanner = { scan, loadTesseract };
+  // Copie allégée de la photo de la fiche, gardée pour comparer pendant la vérification
+  async function compress(file, max = 1100, q = 0.6) {
+    const img = await loadImage(file);
+    const k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement('canvas');
+    c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    return c.toDataURL('image/jpeg', q);
+  }
+
+  root.Scanner = { scan, loadTesseract, compress };
 })(this);
