@@ -1,7 +1,6 @@
 /* Recette — application principale */
 (function () {
   const S = Store;
-  S.load();
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
 
   const $ = (sel, el = document) => el.querySelector(sel);
@@ -936,6 +935,6 @@
     if (ev.changed || page === 'reglages' || page === 'recettes' || page === '') { const y = window.scrollY; route(); window.scrollTo(0, y); }
     if (ev.changed) toast('Mis à jour depuis GitHub');
   });
-  route();
-  Sync.schedule(400);
+  app.innerHTML = '<p class="muted center pad">Chargement…</p>';
+  S.load().then(() => { route(); Sync.schedule(400); });
 })();

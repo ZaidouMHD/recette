@@ -89,7 +89,7 @@
   }
 
   async function run() {
-    if (!enabled()) return;
+    if (!S().ready || !enabled()) return;
     if (running) { again = true; return; }
     running = true;
     emit({ state: 'sync' });
@@ -212,7 +212,7 @@
 
   // Visiteurs (sans jeton) : on charge les recettes partagées publiées sur le site
   async function loadCatalogue() {
-    if (enabled()) return false;
+    if (!S().ready || enabled()) return false;
     let cat;
     try {
       const res = await fetch(DIR + 'catalogue.json', { cache: 'no-cache' });
