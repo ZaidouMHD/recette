@@ -43,7 +43,9 @@
 
   async function connect(key) {
     key = String(key || '').trim();
-    if (!/^AIza[\w-]{20,}$/.test(key)) throw new Error('La clé Google commence par « AIza… ». Copie-la en entier.');
+    key = key.replace(/\s+/g, '');
+    // Anciennes clés « AIza… », nouvelles clés « AQ.… » : c'est Google qui vérifie la clé juste après
+    if (!/^[\w.\-]{20,}$/.test(key)) throw new Error('Clé incomplète : utilise le bouton « copier » de Google AI Studio et colle la clé en entier.');
     const models = await pickModels(key);
     S().data.gemini = { key, models, ajouteLe: new Date().toISOString() };
     S().save({ quiet: true });

@@ -832,11 +832,11 @@
         <ol>
           <li>Va sur <a class="link" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> et connecte-toi avec ton compte Google.</li>
           <li>Touche <b>Create API key</b> (« Créer une clé API »).</li>
-          <li>Copie la clé (elle commence par <code>AIza</code>) et colle-la ci-dessous.</li>
+          <li>Touche l'icône « copier » à côté de la clé (elle commence par <code>AQ.</code> ou <code>AIza</code>) et colle-la ci-dessous.</li>
         </ol>
         <p class="small muted">Gratuit dans la limite d'utilisation de Google. Les photos scannées sont envoyées à Google pour être lues.</p>
       </details>
-      <label class="fld"><span>Clé Google (Gemini)</span><input id="gm-key" type="password" placeholder="AIza…" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
+      <label class="fld"><span>Clé Google (Gemini)</span><input id="gm-key" type="password" placeholder="AQ.… ou AIza…" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
       <p class="small err-text" id="gm-err" hidden></p>
       <button type="button" class="btn primary wide" id="gm-go">${ic('check')} Activer l'IA Google</button>`;
   }
@@ -932,7 +932,14 @@
     const typing = document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
     if (ev.changed && /editer|scan/.test(page)) { toast('Recettes mises à jour depuis GitHub'); return; }
     if (typing) return;
-    if (ev.changed || page === 'reglages' || page === 'recettes' || page === '') { const y = window.scrollY; route(); window.scrollTo(0, y); }
+    if (page === 'reglages') {
+      // Réglages : on ne redessine pas l'écran (ça effacerait une clé ou un jeton en cours de saisie)
+      const st = Sync.status(), el = $('#sync-state');
+      if (el && st.on) el.textContent = st.running ? 'Synchronisation…' : st.error ? '⚠ ' + st.error : st.last ? 'Synchronisé ' + ago(st.last) : 'Première synchronisation…';
+      if (ev.changed) toast('Mis à jour depuis GitHub');
+      return;
+    }
+    if (ev.changed || page === 'recettes' || page === '') { const y = window.scrollY; route(); window.scrollTo(0, y); }
     if (ev.changed) toast('Mis à jour depuis GitHub');
   });
   app.innerHTML = '<p class="muted center pad">Chargement…</p>';
